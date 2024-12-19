@@ -182,3 +182,101 @@ hacerUnTour :: Turista -> Tour -> Turista
 hacerUnTour turista tour = foldl (flip hacerUnaExcursion) (cambiarStress (length tour) turista) tour
 -- Hago un foldl para que lo recorre de izq a derecha (que realice las excursiones en el orden determinado por el tour)
 -- La semilla del foldl en este caso, es el turista luego de que se le aumente el stress
+
+-- b) Dado un conjunto de tours, saber si existe alguno que sea convincente para un turista. 
+-- Esto significa que el tour tiene alguna excursión desestresante la cual, además, deja al turista acompañado luego de realizarla
+
+algunConvincente :: Turista -> [Tour]-> Bool
+algunConvincente turista = any (esConvincente turista)
+
+esConvincente :: Turista -> Tour -> Bool
+esConvincente turista = any (\excursion -> esDesestresante excursion turista || loDejaAcompaniado excursion turista)
+
+esConvincente' :: Turista -> Tour -> Bool
+esConvincente' turista = any (`loDejaAcompaniado` turista) . excursionesDesestresantes turista
+-- 1ero. FIltro las excursiones desestresantes del tour
+-- 2dos. Tengo que consultar si existe alguna excursion desestresante que deja al turista acompañado
+
+loDejaAcompaniado :: Excursion -> Turista -> Bool
+loDejaAcompaniado excursion = not . estaViajandoSolo . hacerUnaExcursion excursion 
+
+-- c) Saber la efectividad de un tour para un conjunto de turistas. Esto se calcula como la sumatoria de la espiritualidad 
+-- recibida de cada turista a quienes les resultó convincente el tour. 
+-- La espiritualidad que recibe un turista es la suma de las pérdidas de stress y cansancio tras el tour.
+
+efectividadDeUnTour :: Tour -> [Turista] -> Number
+efectividadDeUnTour tour = sum . map (flip espiritualidad tour) . filter (flip esConvincente tour)
+-- 1ero. Filtro a los turistas que les resulto convincente el tour
+-- 2dos. De cada uno de ellos obtengo la espiritualidad y lo pongo en una lista 
+-- 3ero. Hago la suamtoria de la lista 
+
+espiritualidad :: Turista -> Tour -> Number
+espiritualidad turista = negate . sum . map (espiritualidadExcursion turista) 
+
+espiritualidadExcursion :: Turista -> Excursion -> Number
+espiritualidadExcursion turista excursion = deltaExcursionSegun stress turista excursion + deltaExcursionSegun cansancio turista excursion
+
+--- Otra VERSION (usando los deltas)
+
+efectividadDeUnTour' :: Tour -> [Turista] -> Number
+efectividadDeUnTour' tour = sum . map (espiritualidadTour tour) . filter (flip esConvincente tour)
+-- 1ero. Filtro a los turistas que les resulto convincente el tour
+-- 2dos. De cada uno de ellos obtengo la espiritualidad y lo pongo en una lista 
+-- 3ero. Hago la sumatoria de la lista 
+
+-- Recordar que los deltas son negativos por ser perdidas de stress y cansancion (por lo tanto entonces hice suma de negativos)
+-- Entonces pongo un (-1) * para pasarlo a positivo la espiritualidad
+espiritualidadTour :: Tour -> Turista -> Number
+espiritualidadTour tour turista = (-1) * deltaTourSegun espiritualidad' turista tour
+
+-- Es como el deltaExcursionSegun pero con un tour!!
+deltaTourSegun :: Indice -> Turista -> Tour -> Number
+deltaTourSegun indice turista tour = deltaSegun indice (hacerUnTour turista tour) turista
+
+-- Como si fuese una nueva caracteristica de los turistas!!
+espiritualidad' :: Indice
+espiritualidad' turista = stress turista + cansancio turista
+
+-- 4) Implementar y contestar en modo de comentarios o pruebas por consola
+-- a. Construir un tour donde se visiten infinitas playas.
+
+tourPlayasInfinitas :: Tour
+tourPlayasInfinitas = repeat irALaPlaya
+
+tourPlayasInfinitas' :: Tour
+tourPlayasInfinitas' = irALaPlaya : tourPlayasInfinitas'
+
+-- b. ¿Se puede saber si ese tour es convincente para Ana? ¿Y con Beto? Justificar.
+
+-- esConvincente' :: Turista -> Tour -> Bool
+-- esConvincente' turista = any (`loDejaAcompaniado` turista) . excursionesDesestresantes turista
+
+-- excursionesDesestresantes :: Turista -> [Excursion] -> [Excursion]
+-- excursionesDesestresantes turista = filter (flip esDesestresante turista)
+
+-- esDesestresante :: Excursion -> Turista -> Bool
+-- esDesestresante excursion turista = deltaExcursionSegun stress turista excursion <= (-3)
+
+-- > esConvincente' ana tourPlayasInfinitas
+-- True
+
+-- Para ana es convinciente porque para que el tour sea convincente necesita por lo menos alguna excursion que sea desestresante
+-- y luego de dicha excursion la deja acompañada a ana (como ana en un comienzo no estaba viajando sola, entonces no afecta)
+-- (Ya la priemra excursion del tour cumple con ser desestresante y no afecta a la varible de viajar solo, CUMPLE) 
+
+-- > esConvincente' beto tourPlayasInfinitas
+-- ERROR
+
+-- Mientras tanto para beto no podemos llegar a un resultado ya que haskell/algoritmo se quedara buscando infinitamente alguna
+-- excursion que cumpla con ambas condiciones (que sea desestresante y que lo deje acompañado a beto). En este caso debido a que
+-- beto en un comienzo NO se encuentra acompañado (esta viajando solo) entonces haskell intentara buscar alguna excursion que
+-- modifique dicha condicion, a su vez buscara tambien que sea desestresante   
+
+-- c. ¿Existe algún caso donde se pueda conocer la efectividad de este tour? Justificar.
+
+-- No es imposibe, porque para calcular la efectividad de un tour necesito la espiritualidad obtenida por cada turista luego
+-- de realizar el tour (y como el tour es infinito no puedo llegar a un resultado concreto de espitualidad). La unica manera
+-- de llegar a un resultado es si doy una lista vacia de turistas, dando como resultado una efectividad = 0  
+
+-- > efectividadDeUnTour' tourPlayasInfinitas []
+-- 0
