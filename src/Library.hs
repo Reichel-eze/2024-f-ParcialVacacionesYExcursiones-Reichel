@@ -122,3 +122,63 @@ type Indice = Turista -> Number
 
 deltaExcursionSegun :: Indice -> Turista -> Excursion -> Number
 deltaExcursionSegun indice turista excursion = deltaSegun indice (hacerUnaExcursion excursion turista) turista
+
+-- c) Usar la función anterior para resolver cada uno de estos puntos:
+
+-- i) Saber si una excursión es educativa para un turista, que implica que termina aprendiendo algún idioma.
+
+esEducativa :: Excursion -> Turista -> Bool
+esEducativa excursion turista = deltaExcursionSegun cantidadIdiomas turista excursion == 1
+
+cantidadIdiomas :: Turista -> Number
+cantidadIdiomas = length .idiomas
+
+-- ii) Conocer las excursiones desestresantes para un turista. Estas son aquellas que le reducen al menos 3 unidades de 
+-- stress al turista.
+
+excursionesDesestresantes :: Turista -> [Excursion] -> [Excursion]
+excursionesDesestresantes turista = filter (flip esDesestresante turista)
+
+esDesestresante :: Excursion -> Turista -> Bool
+esDesestresante excursion turista = deltaExcursionSegun stress turista excursion <= (-3)
+
+-- 3) Para mantener a los turistas ocupados todo el día, la empresa vende paquetes de excursiones llamados tours. 
+-- Un tour se compone por una serie de excursiones.
+
+type Tour = [Excursion]
+
+-- Completo: Comienza con una caminata de 20 minutos para apreciar una "cascada", luego se camina 40 minutos hasta una playa, 
+-- y finaliza con una salida con gente local que habla "melmacquiano".
+
+completo :: Tour
+completo = [caminarCiertosMinutos 20, apreciarAlgunElemento "cascada", caminarCiertosMinutos 40, irALaPlaya, salirAHablarUnIdioma "melmacquiano"] 
+
+-- Lado B: Este tour consiste en ir al otro lado de la isla a hacer alguna excursión (de las existentes) que elija el turista. 
+-- Primero se hace un paseo en barco por aguas tranquilas (cercanas a la costa) hasta la otra punta de la isla, 
+-- luego realiza la excursión elegida y finalmente vuelve caminando hasta la otra punta, tardando 2 horas.
+
+ladoB :: Excursion -> Tour
+ladoB excursionAElegir = [paseoEnBarco Tranquila, excursionAElegir, caminarCiertosMinutos 120]
+
+-- Isla Vecina: Se navega hacia una isla vecina para hacer una excursión. Esta excursión depende de cómo esté la marea 
+-- al llegar a la otra isla: si está fuerte se aprecia un "lago", sino se va a una playa. 
+-- En resumen, este tour implica hacer un paseo en barco hasta la isla vecina, luego llevar a cabo dicha excursión, 
+-- y finalmente volver a hacer un paseo en barco de regreso. La marea es la misma en todo el camino.
+
+islaVecina :: Marea -> Tour
+islaVecina mareaVecina = [paseoEnBarco mareaVecina, excursionIslaVecina mareaVecina, paseoEnBarco mareaVecina]
+--islaVecina Moderada  = [paseoEnBarco Moderada, irALaPlaya, paseoEnBarco Moderada]
+--islaVecina Tranquila = [paseoEnBarco Tranquila, irALaPlaya, paseoEnBarco Tranquila]
+
+excursionIslaVecina :: Marea -> Excursion
+excursionIslaVecina Fuerte = apreciarAlgunElemento "lago"
+excursionIslaVecina _      = irALaPlaya
+
+-- Modelar los tours para:
+-- a) Hacer que un turista haga un tour. Esto implica, primero un aumento del stress en tantas unidades como cantidad de 
+-- excursiones tenga el tour, y luego realizar las excursiones en orden.
+
+hacerUnTour :: Turista -> Tour -> Turista 
+hacerUnTour turista tour = foldl (flip hacerUnaExcursion) (cambiarStress (length tour) turista) tour
+-- Hago un foldl para que lo recorre de izq a derecha (que realice las excursiones en el orden determinado por el tour)
+-- La semilla del foldl en este caso, es el turista luego de que se le aumente el stress
